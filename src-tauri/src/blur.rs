@@ -1,15 +1,28 @@
-use image::RgbaImage;
+use image::{imageops, RgbaImage};
 
 /// Return a copy of `img` with the given rectangle gaussian-blurred.
 /// The rect is clamped to the image bounds; a zero-area rect is a no-op.
-pub fn blur_region(_img: &RgbaImage, _x: u32, _y: u32, _w: u32, _h: u32, _sigma: f32) -> RgbaImage {
-    todo!("implement blur_region")
+pub fn blur_region(img: &RgbaImage, x: u32, y: u32, w: u32, h: u32, sigma: f32) -> RgbaImage {
+    let (iw, ih) = img.dimensions();
+    let x = x.min(iw);
+    let y = y.min(ih);
+    let w = w.min(iw - x);
+    let h = h.min(ih - y);
+
+    let mut out = img.clone();
+    if w == 0 || h == 0 {
+        return out;
+    }
+    let region = imageops::crop_imm(img, x, y, w, h).to_image();
+    let blurred = imageops::blur(&region, sigma);
+    imageops::overlay(&mut out, &blurred, x as i64, y as i64);
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{GenericImageView, Rgba, RgbaImage};
+    use image::{Rgba, RgbaImage};
 
     /// left half red, right half blue
     fn split() -> RgbaImage {
