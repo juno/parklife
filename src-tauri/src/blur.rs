@@ -1,22 +1,10 @@
-use image::{imageops, RgbaImage};
+use image::RgbaImage;
 
-/// Return a copy of `img` with the given rectangle gaussian-blurred.
-/// The rect is clamped to the image bounds; a zero-area rect is a no-op.
-pub fn blur_region(img: &RgbaImage, x: u32, y: u32, w: u32, h: u32, sigma: f32) -> RgbaImage {
-    let (iw, ih) = img.dimensions();
-    let x = x.min(iw);
-    let y = y.min(ih);
-    let w = w.min(iw - x);
-    let h = h.min(ih - y);
-
-    let mut out = img.clone();
-    if w == 0 || h == 0 {
-        return out;
-    }
-    let region = imageops::crop_imm(img, x, y, w, h).to_image();
-    let blurred = imageops::blur(&region, sigma);
-    imageops::overlay(&mut out, &blurred, x as i64, y as i64);
-    out
+/// Return a copy of `img` with the interior of `poly` gaussian-blurred.
+/// `poly` is a list of `(x, y)` vertices in pixel space (an even-odd fill).
+/// Fewer than 3 vertices is a no-op; vertices outside the image are clamped.
+pub fn blur_polygon(_img: &RgbaImage, _poly: &[(f32, f32)], _sigma: f32) -> RgbaImage {
+    todo!("implement blur_polygon")
 }
 
 #[cfg(test)]
@@ -35,17 +23,21 @@ mod tests {
         })
     }
 
-    #[test]
-    fn blurs_inside_region_only() {
-        let src = split();
-        let out = blur_region(&src, 30, 30, 40, 40, 5.0);
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> Vec<(f32, f32)> {
+        vec![(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+    }
 
-        // pixels outside the selected rect are untouched
+    #[test]
+    fn blurs_inside_polygon_only() {
+        let src = split();
+        let out = blur_polygon(&src, &rect(30.0, 30.0, 40.0, 40.0), 5.0);
+
+        // pixels outside the polygon are untouched
         assert_eq!(out.get_pixel(0, 0), src.get_pixel(0, 0));
         assert_eq!(out.get_pixel(99, 99), src.get_pixel(99, 99));
         assert_eq!(out.get_pixel(10, 80), src.get_pixel(10, 80));
 
-        // across the red/blue seam inside the rect, colors bleed into each other
+        // across the red/blue seam inside the polygon, colors bleed together
         let left_of_seam = out.get_pixel(49, 50);
         assert!(left_of_seam[2] > 0, "expected blue bleed, got {left_of_seam:?}");
         let right_of_seam = out.get_pixel(50, 50);
@@ -53,15 +45,30 @@ mod tests {
     }
 
     #[test]
-    fn clamps_out_of_bounds_rect() {
+    fn blurs_only_inside_triangle() {
         let src = split();
-        let out = blur_region(&src, 80, 80, 999, 999, 3.0);
+        let tri = vec![(40.0, 40.0), (60.0, 40.0), (50.0, 70.0)];
+        let out = blur_polygon(&src, &tri, 5.0);
+
+        // inside the triangle, on the seam -> mixed colour
+        let p = out.get_pixel(50, 45);
+        assert!(p[0] > 0 && p[2] > 0, "expected mix inside triangle, got {p:?}");
+
+        // inside the bounding box but outside the triangle -> original
+        assert_eq!(out.get_pixel(41, 68), src.get_pixel(41, 68));
+        assert_eq!(out.get_pixel(0, 0), src.get_pixel(0, 0));
+    }
+
+    #[test]
+    fn clamps_out_of_bounds_polygon() {
+        let src = split();
+        let out = blur_polygon(&src, &rect(80.0, 80.0, 999.0, 999.0), 3.0);
         assert_eq!(out.dimensions(), (100, 100));
     }
 
     #[test]
-    fn zero_area_rect_is_noop() {
+    fn degenerate_polygon_is_noop() {
         let src = split();
-        assert_eq!(blur_region(&src, 10, 10, 0, 0, 5.0), src);
+        assert_eq!(blur_polygon(&src, &[(10.0, 10.0), (20.0, 20.0)], 5.0), src);
     }
 }
