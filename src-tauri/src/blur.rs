@@ -1,10 +1,57 @@
-use image::RgbaImage;
+use image::{imageops, RgbaImage};
 
 /// Return a copy of `img` with the interior of `poly` gaussian-blurred.
 /// `poly` is a list of `(x, y)` vertices in pixel space (an even-odd fill).
 /// Fewer than 3 vertices is a no-op; vertices outside the image are clamped.
-pub fn blur_polygon(_img: &RgbaImage, _poly: &[(f32, f32)], _sigma: f32) -> RgbaImage {
-    todo!("implement blur_polygon")
+pub fn blur_polygon(img: &RgbaImage, poly: &[(f32, f32)], sigma: f32) -> RgbaImage {
+    let mut out = img.clone();
+    if poly.len() < 3 {
+        return out;
+    }
+    let (iw, ih) = img.dimensions();
+
+    let min_x = poly.iter().map(|p| p.0).fold(f32::INFINITY, f32::min);
+    let min_y = poly.iter().map(|p| p.1).fold(f32::INFINITY, f32::min);
+    let max_x = poly.iter().map(|p| p.0).fold(f32::NEG_INFINITY, f32::max);
+    let max_y = poly.iter().map(|p| p.1).fold(f32::NEG_INFINITY, f32::max);
+
+    let x0 = min_x.floor().clamp(0.0, iw as f32) as u32;
+    let y0 = min_y.floor().clamp(0.0, ih as f32) as u32;
+    let x1 = max_x.ceil().clamp(0.0, iw as f32) as u32;
+    let y1 = max_y.ceil().clamp(0.0, ih as f32) as u32;
+    if x1 <= x0 || y1 <= y0 {
+        return out;
+    }
+
+    let (bw, bh) = (x1 - x0, y1 - y0);
+    let region = imageops::crop_imm(img, x0, y0, bw, bh).to_image();
+    let blurred = imageops::blur(&region, sigma);
+
+    for by in 0..bh {
+        for bx in 0..bw {
+            let (px, py) = (x0 + bx, y0 + by);
+            if point_in_poly(px as f32 + 0.5, py as f32 + 0.5, poly) {
+                out.put_pixel(px, py, *blurred.get_pixel(bx, by));
+            }
+        }
+    }
+    out
+}
+
+/// Even-odd ray-cast point-in-polygon test.
+fn point_in_poly(x: f32, y: f32, poly: &[(f32, f32)]) -> bool {
+    let mut inside = false;
+    let n = poly.len();
+    let mut j = n - 1;
+    for i in 0..n {
+        let (xi, yi) = poly[i];
+        let (xj, yj) = poly[j];
+        if (yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi {
+            inside = !inside;
+        }
+        j = i;
+    }
+    inside
 }
 
 #[cfg(test)]

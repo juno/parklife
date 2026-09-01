@@ -29,6 +29,29 @@
   gap: 8px;
 }
 
+.modes {
+  display: flex;
+}
+
+.modes button {
+  border-radius: 0;
+}
+
+.modes button:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.modes button:last-child {
+  border-radius: 0 8px 8px 0;
+  margin-left: -1px;
+}
+
+.modes button.on {
+  border-color: #396cd8;
+  background: #396cd8;
+  color: #fff;
+}
+
 .strength span {
   width: 2ch;
   text-align: right;
@@ -66,6 +89,12 @@ button:disabled {
   overflow: auto;
   background: #e4e4e4;
   border-radius: 8px;
+  border: 2px dashed transparent;
+}
+
+.stage.drag-over {
+  border-color: #396cd8;
+  background: #d6e2fb;
 }
 
 .hint {
@@ -83,18 +112,26 @@ button:disabled {
   user-select: none;
 }
 
-.capture {
+.overlay {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   cursor: crosshair;
   touch-action: none;
 }
 
-.selection {
-  position: absolute;
-  border: 1px solid #fff;
-  outline: 1px solid #396cd8;
-  pointer-events: none;
+.overlay polygon {
+  fill: rgba(57, 108, 216, 0.18);
+  stroke: #fff;
+  stroke-width: 1;
+  paint-order: stroke;
+}
+
+.overlay polygon.open {
+  fill: none;
+  stroke-dasharray: 4 3;
 }
 
 .status {
