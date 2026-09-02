@@ -39,7 +39,12 @@ Other commands:
 
 ```sh
 pnpm build          # frontend build only (tsc + vite)
-pnpm tauri build    # production bundle
+pnpm tauri build    # production bundle (native arch only)
+
+# Universal binary — runs on both Apple Silicon and Intel Macs:
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+pnpm tauri build --target universal-apple-darwin
+# .app lands in src-tauri/target/universal-apple-darwin/release/bundle/macos/
 
 cd src-tauri
 cargo test          # Rust tests
