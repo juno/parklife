@@ -23,9 +23,13 @@ fn decodable_path(src: &str) -> Result<PathBuf, String> {
     if !is_heic(src) {
         return Ok(PathBuf::from(src));
     }
+    // Canonicalize so the path can't start with `-` and be read as a sips flag.
+    let src = std::fs::canonicalize(src).map_err(|e| e.to_string())?;
     let dst = working_path();
     let ok = std::process::Command::new("sips")
-        .args(["-s", "format", "png", src, "--out"])
+        .args(["-s", "format", "png"])
+        .arg(&src)
+        .arg("--out")
         .arg(&dst)
         .status()
         .map_err(|e| e.to_string())?
@@ -33,7 +37,7 @@ fn decodable_path(src: &str) -> Result<PathBuf, String> {
     if ok {
         Ok(dst)
     } else {
-        Err(format!("sips could not convert {src}"))
+        Err(format!("sips could not convert {}", src.display()))
     }
 }
 
