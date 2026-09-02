@@ -1,12 +1,20 @@
 # Parklife
 
-A macOS desktop app for blurring a region of an image and saving the result as a new file.
+A macOS desktop app for blurring regions of an image and saving the result as a new file.
 
-Open an image, drag to select a region, apply blur, and save a copy. Blur is done in Rust
+Open an image, mark one or more regions, apply blur, and save a copy. Blur runs in Rust
 (the `image` crate), so large images stay responsive.
 
-> Status: early scaffold. The blur workflow is not implemented yet — the current build is
-> the Tauri starter template.
+![Parklife blurring faces on a station platform photo](./docs/screenshot.png)
+
+## Features
+
+- **Open** via file dialog or by dropping an image onto the window.
+- **Rectangle** or **Freehand** (lasso) region selection — drag across the image to mark an area.
+- **Adjustable blur strength** (Gaussian sigma 1–30).
+- **Apply blur** repeatedly to stack regions; **Undo / Redo / Reset** step through the history.
+- **Save copy…** writes a JPEG; the original file is never touched.
+- HEIC/HEIF input is supported (transcoded to PNG via the macOS built-in `sips`).
 
 ## Stack
 
