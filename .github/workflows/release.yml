@@ -30,7 +30,9 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - run: pnpm install --frozen-lockfile
+      # esbuild ships prebuilt binaries; its ignored postinstall is harmless, but
+      # pnpm's CI-mode strict-dep-builds turns that warning into a hard failure.
+      - run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
 
       - uses: tauri-apps/tauri-action@v0
         id: tauri
