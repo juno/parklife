@@ -34,22 +34,20 @@ jobs:
       # pnpm's CI-mode strict-dep-builds turns that warning into a hard failure.
       - run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
 
-      - uses: tauri-apps/tauri-action@v0
-        id: tauri
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.event.inputs.tag }}
-          releaseName: ${{ github.event.inputs.tag }}
-          releaseDraft: false
-          prerelease: false
+      - run: pnpm tauri build --bundles app
 
-      # tauri-action ships .dmg / .app.tar.gz on macOS; add a plain .zip of the .app
-      - name: Zip .app and attach to release
+      # Distribute a single artifact: an ad-hoc signed .app.zip.
+      # ad-hoc sign so Gatekeeper reports "unidentified developer" instead of "damaged"
+      # (a valid signature is mandatory on Apple Silicon). Still unnotarized, so users
+      # open it via System Settings > Privacy & Security > Open Anyway on first launch.
+      # No Apple Developer account needed.
+      - name: Sign, zip, and publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag }}
         run: |
           cd src-tauri/target/release/bundle/macos
+          codesign --deep --force --sign - Parklife.app
           ditto -c -k --keepParent Parklife.app Parklife.app.zip
-          gh release upload "$TAG" Parklife.app.zip --clobber
+          gh release create "$TAG" Parklife.app.zip --title "$TAG" --target "$GITHUB_SHA" \
+            || gh release upload "$TAG" Parklife.app.zip --clobber
