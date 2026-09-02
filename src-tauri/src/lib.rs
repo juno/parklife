@@ -29,13 +29,30 @@ fn apply_blur(working: String, points: Vec<(f32, f32)>, sigma: f32) -> Result<St
     Ok(dst.to_string_lossy().into_owned())
 }
 
-/// Write the current working file to `dst`, format chosen by its extension.
+/// Force a `.jpg` extension: every saved copy is JPEG.
+fn jpeg_path(dst: &str) -> PathBuf {
+    let mut p = PathBuf::from(dst);
+    p.set_extension("jpg");
+    p
+}
+
+/// Write the current working file to `dst` as JPEG (alpha dropped).
 #[tauri::command]
 fn save_copy(working: String, dst: String) -> Result<(), String> {
-    image::open(&working)
-        .map_err(|e| e.to_string())?
-        .save(&dst)
-        .map_err(|e| e.to_string())
+    let img = image::open(&working).map_err(|e| e.to_string())?.to_rgb8();
+    img.save(jpeg_path(&dst)).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::jpeg_path;
+
+    #[test]
+    fn forces_jpg_extension() {
+        assert_eq!(jpeg_path("/a/photo.png").to_str().unwrap(), "/a/photo.jpg");
+        assert_eq!(jpeg_path("/a/photo").to_str().unwrap(), "/a/photo.jpg");
+        assert_eq!(jpeg_path("/a/my.photo.png").to_str().unwrap(), "/a/my.photo.jpg");
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

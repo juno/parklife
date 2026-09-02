@@ -168,7 +168,7 @@ function App() {
 
   async function saveCopy() {
     if (!workingPath) return;
-    const dst = await save({ filters: [{ name: "Images", extensions: IMAGE_EXTS }] });
+    const dst = await save({ filters: [{ name: "JPEG", extensions: ["jpg", "jpeg"] }] });
     if (!dst) return;
     setBusy(true);
     setStatus("Saving…");
